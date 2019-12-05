@@ -7,7 +7,7 @@
 }
 .gamebutton{
     border: none;
-    color: white;
+    color: rgb(102, 124, 102);
     padding: 15px 32px;
     text-align: center;
     text-decoration: none;
@@ -15,9 +15,20 @@
     font-size: 16px;
     margin: 4px 2px;
     cursor: pointer;
+    float: left;
 }
 #gametext{
     height: 80%;
     padding: 10px;
     overflow: scroll;
+    color: whitesmoke;
+}
+
+#active{
+    opacity: 1.0;
+    cursor: pointer;
+}
+
+#nctive{
+    opacity: 0.6;
 }
