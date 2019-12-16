@@ -104,11 +104,12 @@ function buttonClicked(buttonNumber){   //this method is run whenever a button i
                 break
             case "End Turn":
                 players[playerTurn].firstTurn = true
-                playerTurn++
+                playerTurn++;console.log("playerendturn")
                 if(playerTurn==numberOfPlayers)
                     playerTurn = 0
                 buttonRef[1].id = "inactive"
                 print("It's now " + players[playerTurn].name + "'s turn!")
+                console.log(playerTurn,players[playerTurn].name,"function button")
                 if(players[playerTurn].type=="computer")
                     computerTurn(players[playerTurn])
                 break
@@ -153,7 +154,7 @@ function resetRound(){
     dieAndCoin.playerRound++
     if(dieAndCoin.playerRound==numberOfPlayers)
         dieAndCoin.playerRound = 0
-    playerTurn = dieAndCoin.playerRound
+    playerTurn = dieAndCoin.playerRound;console.log("resetendturn")
     dieAndCoin.lossTotal = 0
     for(var i=0;i<numberOfPlayers;i++){
         players[i].firstTurn = true
@@ -163,8 +164,12 @@ function resetRound(){
     print("Next round!!!")
     buttonRef[1].id = "inactive"
     print("It's now " + players[playerTurn].name + "'s turn!")
+    console.log(playerTurn,players[playerTurn].name,"function reset")
     if(players[playerTurn].type=="computer")
         computerTurn(players[playerTurn])
+    else
+        buttonRef[0].id = "active"
+    buttonRef[1].id = "inactive"
 }
 
 function checkGameWon(){
@@ -185,26 +190,35 @@ function sleep(ms) {
 }
 
 async function computerTurn(computer){
+    console.log(computer.type)
     buttonRef[0].id = "inactive"
     buttonRef[1].id = "inactive"
     do {
         buttonRef[1].id = "inactive"
-        await sleep(1000)
         dieAndCoin.roll()
-        players[playerTurn].score += dieAndCoin.score()
-        print(players[playerTurn].name + " flipped " + (dieAndCoin.coinFlip==0 ? "heads" : "tails") + ", rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
-        print(players[playerTurn].name + "'s new score: " + players[playerTurn].score)
+        computer.score += dieAndCoin.score()
+        print(computer.name + " flipped " + (dieAndCoin.coinFlip==0 ? "heads" : "tails") + ", rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
+        print(computer.name + "'s new score: " + computer.score)
         var computerWon = checkWinningConditions(players[playerTurn])
+        if(!computerWon){
+            console.log("startsleep")//resulting in computer playing for player
+            await sleep(1000)//how to cancel early?
+            console.log("endsleep")//repeats past end of turn, need cancellation
+        }
     } while(computer.score<computer.tolerance && !computerWon)
-    players[playerTurn].firstTurn = true
-    playerTurn++
-    if(playerTurn==numberOfPlayers)
-        playerTurn = 0
-    buttonRef[0].id = "active"
-    buttonRef[1].id = "inactive"
-    print("It's now " + players[playerTurn].name + "'s turn!")
-    if(players[playerTurn].type=="computer")
-        computerTurn(players[playerTurn])
+    if(players[playerTurn].type=="computer"){
+        players[playerTurn].firstTurn = true
+        console.log(playerTurn,players[playerTurn].name)
+        playerTurn++;console.log("compendturn")
+        if(playerTurn==numberOfPlayers)
+            playerTurn = 0
+        buttonRef[0].id = "active"
+        buttonRef[1].id = "inactive"
+        print("It's now " + players[playerTurn].name + "'s turn!")
+        console.log(playerTurn,players[playerTurn].name,"function compturn")
+        if(players[playerTurn].type=="computer")
+            computerTurn(players[playerTurn])
+    }
 }
 
 function getNumberOfPlayersForm(){  //this method creates the form asking for the number of players
@@ -362,6 +376,7 @@ function handleGameFlow(){
             players[i].tolerance = normalRandom(36,12)
     }
     print("It's now " + players[playerTurn].name + "'s turn!")
+    console.log(playerTurn,players[playerTurn].name,"function 1")
     if(players[playerTurn].type=="computer")
         computerTurn(players[playerTurn])
 }
