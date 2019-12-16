@@ -3,25 +3,39 @@ var numberOfPlayers     //this variable stores the number of players while the p
 var buttonRef = []      //this array holds references to the two main buttons on the user interface
 var gametextRef         //this variable holds a reference to the main textbox where all messages are printed
 var URLsearch           //this variable holds a reference to an instance of a class which can find form data in the page's URL
-var numberOfPlayersForm //this variable holds a reference to the form which collects the number of players
-var playerDataForm      //this variable holds a reference to the form which collects player info
-var dieAndCoin = {      //this Object generates values for dice roll and coin toss
+var playerTurn          //this variable stores the index of the player whose turn it currently is 
+var dieAndCoin = {      //this Object generates values and stores values for keeping track of the game
     firstDie: 0,
     secondDie: 0,
     coinFlip: 0,
-    sum: function(){
-        return this.firstDie + this.secondDie
-    },
+    lossTotal: 0,
+    playerRound: 0,
+    gameWon: false,
+    sum: function(){return this.firstDie + this.secondDie},
+    product: function(){return this.firstDie * this.secondDie},
+    maxmin: function(toggle){return toggle ? Math.max(this.firstDie,this.secondDie) : Math.min(this.firstDie,this.secondDie)},
+    identifier: function(){return this.firstDie % 2 + this.secondDie % 2 + 3 * this.coinFlip},
+    score: function(){
+        switch(this.identifier()){
+            case 0: return this.sum()
+            case 1: return 2 * this.sum()
+            case 2: return 2 * this.maxmin(true)
+            case 3: return this.product()
+            case 4: return 2 * this.product()
+            case 5: return 2 * this.maxmin(false)
+            }
+        },
     roll: function(){
         this.firstDie = Math.floor(Math.random() * 6) + 1
         this.secondDie = Math.floor(Math.random() * 6) + 1
-        this.coinFlip = Math.floor(Math.random() * 6) + 1
+        this.coinFlip = Math.floor(Math.random() * 2)
     }
 }
 
-function print(message){
+function print(message){    //this method prints a message to the main gametext div
     gametextRef.innerHTML += message + "</br>"
-}       //this method prints a message to the main gametext div
+    gametextRef.scrollTop = gametextRef.scrollHeight        //  Scroll to bottom of gametext box if there is overflow
+}
 
 function startGame(){   //this method is run as soon as the page loads
     URLsearch = new URLSearchParams(window.location.search)         //  These lines assign reference variables 
@@ -38,10 +52,13 @@ function startGame(){   //this method is run as soon as the page loads
 }
 
 function buttonClicked(buttonNumber){   //this method is run whenever a button is clicked
-    gametextRef.scrollTop = gametextRef.scrollHeight    //  Scroll to bottom of gametext box if there is overflow
-    if(buttonRef[buttonNumber].id=="active"){           //  Check if the button selected is currently active or not
-        switch(buttonRef[buttonNumber].innerHTML){      //  Switch statment executes code based on the current text of a button
+    if(buttonRef[buttonNumber].id=="active"){               //  Check if the button selected is currently active or not
+        switch(buttonRef[buttonNumber].innerHTML){          //  Switch statment executes code based on the current text of a button
             case "Yes":     //  Response to "Do you want to play the Dice Game?"
+                if(dieAndCoin.gameWon){
+                    console.log("what")
+                    window.location.reload()
+                }
                 print("Okay let's get started! How many players are there?")
                 buttonRef[0].id = "inactive"                            //  Set the state of both buttons to inactive
                 buttonRef[1].id = "inactive"                            //  Player information will be entered through a form
@@ -51,12 +68,143 @@ function buttonClicked(buttonNumber){   //this method is run whenever a button i
                     gametextRef.appendChild(getNumberOfPlayersForm())   //  Create and add the form to the main game text area to be filled
                 break
             case "No":      //  Response to "Do you want to play the Dice Game?"
-                print("Too bad... Maybe another time?")
-                buttonRef[0].innerHTML = "Okay bye..."  //  Dead end for the script, need to reload the page to play again
-                buttonRef[1].style.display = "none"     //  Make 2nd button disappear
+                    print("Too bad... Maybe another time?")
+                    buttonRef[0].innerHTML = "Bye!"     //  Dead end for the script, need to reload the page to play again
+                    buttonRef[1].style.display = "none"     //  Make 2nd button disappear
+                break
+            case "Bye!":
+                window.location.href = './index.html'
+                break
+            case "Roll Die!":
+                dieAndCoin.roll()                                                           //  Call the roll() method 
+                players[playerTurn].order = dieAndCoin.sum()                                //  Set their order property to the sum()
+                print(players[playerTurn].name + " rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
+                playerTurn++
+                if(playerTurn>=numberOfPlayers)
+                    playerOrder()
+                else
+                    print("Go " + players[playerTurn].name + "!")
+                break
+            case "Re-roll!":
+                dieAndCoin.roll()
+                players[playerTurn].order = dieAndCoin.sum()
+                print(players[playerTurn].name + " rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
+                playerTurn++
+                if(playerTurn>1)
+                    playerOrder()
+                else
+                    print("Go " + players[playerTurn].name + "!")
+                break
+            case "Roll":
+                dieAndCoin.roll()
+                players[playerTurn].score += dieAndCoin.score()
+                print(players[playerTurn].name + " flipped " + (dieAndCoin.coinFlip==0 ? "heads" : "tails") + ", rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
+                print(players[playerTurn].name + "'s new score: " + players[playerTurn].score)
+                checkWinningConditions(players[playerTurn])
+                break
+            case "End Turn":
+                players[playerTurn].firstTurn = true
+                playerTurn++
+                if(playerTurn==numberOfPlayers)
+                    playerTurn = 0
+                buttonRef[1].id = "inactive"
+                print("It's now " + players[playerTurn].name + "'s turn!")
+                if(players[playerTurn].type=="computer")
+                    computerTurn(players[playerTurn])
                 break
         }
     }
+}
+
+function checkWinningConditions(player){
+    var returnVal = false
+    if(player.firstTurn && player.type!="computer"){
+        player.firstTurn = false
+        buttonRef[1].id = "active"
+    }
+    if(player.score>50){
+        player.notBusted = false
+        dieAndCoin.lossTotal += player.score
+        print("Uh-oh... " + player.name + " busted!")
+        returnVal = true
+    }else if(player.score==50){
+        player.totalScore += numberOfPlayers * 50
+        print("WOW! " + player.name + " got exactly 50 and won " + numberOfPlayers * 50 + " points!")
+        if(!checkGameWon()){
+            print("Their total score is now " + player.totalScore)
+            resetRound()
+        }
+        returnVal = true
+    }
+    if(players.filter(player=>player.notBusted).length==1){
+        winner = players.filter(player=>player.notBusted)[0]
+        winner.totalScore += dieAndCoin.lossTotal
+        print(winner.name + " is the only player who hasn't busted this round!")
+        if(!checkGameWon()){
+            print("Their total score is now " + winner.totalScore)
+            resetRound()
+        }
+        returnVal = true
+    }
+    return returnVal
+}
+
+function resetRound(){
+    dieAndCoin.playerRound++
+    if(dieAndCoin.playerRound==numberOfPlayers)
+        dieAndCoin.playerRound = 0
+    playerTurn = dieAndCoin.playerRound
+    dieAndCoin.lossTotal = 0
+    for(var i=0;i<numberOfPlayers;i++){
+        players[i].firstTurn = true
+        players[i].notBusted = true
+        players[i].score = 0
+    }
+    print("Next round!!!")
+    buttonRef[1].id = "inactive"
+    print("It's now " + players[playerTurn].name + "'s turn!")
+    if(players[playerTurn].type=="computer")
+        computerTurn(players[playerTurn])
+}
+
+function checkGameWon(){
+    if(players.filter(player=>player.totalScore>=1000).length>0){
+        winner = players.filter(player=>player.totalScore>=1000)[0]
+        print("Holy smokes! " + winner.name + " has won the game by reaching " + winner.totalScore + " points!")
+        print("Congratulations!!!" + "</br>" + "Would you like to play again?")
+        buttonRef[0].innerHTML = "Yes"
+        buttonRef[1].innerHTML = "No"
+        dieAndCoin.gameWon = true
+        return true
+    }
+    return false
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function computerTurn(computer){
+    buttonRef[0].id = "inactive"
+    buttonRef[1].id = "inactive"
+    do {
+        buttonRef[1].id = "inactive"
+        await sleep(1000)
+        dieAndCoin.roll()
+        players[playerTurn].score += dieAndCoin.score()
+        print(players[playerTurn].name + " flipped " + (dieAndCoin.coinFlip==0 ? "heads" : "tails") + ", rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
+        print(players[playerTurn].name + "'s new score: " + players[playerTurn].score)
+        var computerWon = checkWinningConditions(players[playerTurn])
+    } while(computer.score<computer.tolerance && !computerWon)
+    players[playerTurn].firstTurn = true
+    playerTurn++
+    if(playerTurn==numberOfPlayers)
+        playerTurn = 0
+    buttonRef[0].id = "active"
+    buttonRef[1].id = "inactive"
+    print("It's now " + players[playerTurn].name + "'s turn!")
+    if(players[playerTurn].type=="computer")
+        computerTurn(players[playerTurn])
 }
 
 function getNumberOfPlayersForm(){  //this method creates the form asking for the number of players
@@ -114,10 +262,9 @@ function getPlayerInfo(){   //this method is called after the first form is fill
     playerDataForm.childNodes[1].setAttribute("value",numberOfPlayers)  //  Fill in the textfield so it appears as if it has already been filled
     playerDataForm.childNodes[2].removeAttribute("onclick")             //  Remove the onlick attribute of the first enter button so it cannot be clicked again
     playerDataForm.appendChild(document.createElement("BR"))            //  Add a newline element
-    var i;
     var playerNameArray = []
     var playerTypeArray = []
-    for(i=0;i<numberOfPlayers;i++){                                     //  For loop for number of players
+    for(var i=0;i<numberOfPlayers;i++){                                     //  For loop for number of players
         playerNameArray[i] = document.createElement("INPUT")            //  Create INPUT element (textfield)
         Object.assign(playerNameArray[i], {
             type: 'text',                                               //  Specify that it is a textfield
@@ -152,7 +299,7 @@ function getPlayerInfo(){   //this method is called after the first form is fill
     gametextRef.appendChild(playerDataForm)                 //  Add the form to the main game text area
 }
 
-function submitForm2(formToSubmit,data){ //this method is an overload instance of the first submitForm(), but for the second form
+function submitForm2(formToSubmit,data){ //this method is like submitForm(), but for the second form
     if(URLsearch.has("playerName0")!=true){
         if(data.filter(playerType=>playerType.checked).length==data.length/2)
             formToSubmit.submit()                               //  Submit the form if exactly half of the radio buttons are checked (at least one for every player)
@@ -161,9 +308,8 @@ function submitForm2(formToSubmit,data){ //this method is an overload instance o
     }
 }
 
-function preGameSetup(){    //this method is called after the second form is filled
-    var i;
-    for(i=0;i<numberOfPlayers;i++){                                                 //  Loop through the number of players to assign their data to the Object array
+function preGameSetup(){ //this method is called after the second form is filled
+    for(var i=0;i<numberOfPlayers;i++){                                                 //  Loop through the number of players to assign their data to the Object array
         players[i] = new Object()                                                   //  Initialize each element as a new Object
         players[i].name = URLsearch.get("playerName" + i)                           //  Set the name property
         playerDataForm.childNodes[7*i+5].setAttribute("value",players[i].name)      //  Fill in the textfield so it appears as if it has already been filled
@@ -176,31 +322,53 @@ function preGameSetup(){    //this method is called after the second form is fil
         }
     }
     print("Time to play the game!")
-    playerOrder()                                                                   //  Call the function that determines player order
+    print("Let's roll dice to see who goes first!")
+    playerTurn = 0
+    print("Go " + players[playerTurn].name + "!")
+    buttonRef[0].innerHTML = "Roll Die!"
+    buttonRef[0].id = "active"
+    buttonRef[1].style.display = "none"
 }
 
 function playerOrder(){ //this method rolls two dice for each player and determines the order of playing
-    print("Let's roll dice to see who goes first!")
-    var i
-    for(i=0;i<numberOfPlayers;i++){                                                 //  Loop through each player and roll dice
-        dieAndCoin.roll()                                                           //  Call the roll() method 
-        players[i].order = dieAndCoin.sum()                                         //  Set their order property to the sum()
-        print(players[i].name + " rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
-    }
-    players.sort((a,b)=>a.order<b.order?1:-1)                                       //  Sort the array by order
-    while(players[0].order==players[1].order){                                      //  While two players have high ties, re-roll
+    playerTurn = 0
+    players.sort((a,b)=>a.order<b.order?1:-1)                                   //  Sort the array by order
+    if(players[0].order==players[1].order){                                     //  While two players have high ties, re-roll
+        buttonRef[0].innerHTML = "Re-roll!"
         print("Since " + players[0].name + " and " + players[1].name + " rolled the same sum, they must re-roll!")
-        for(i=0;i<2;i++){
-            dieAndCoin.roll()
-            players[i].order = dieAndCoin.sum()
-            print(players[i].name + " rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
-        }
-        players.sort((a,b)=>a.order<b.order?1:-1)
+        print("Go " + players[playerTurn].name + "!")
+        return
     }
-    print(players[0].name + " goes first, let the game begin!!!")
     handleGameFlow()                                                                //  Call the function that start the actual game
 }
 
 function handleGameFlow(){
+    print(players[0].name + " goes first, let the game begin!!!")
+    buttonRef[0].innerHTML = "Roll"
+    buttonRef[0].id = "active"
+    buttonRef[1].style.display = "inline-block"
+    buttonRef[1].innerHTML = "End Turn"
+    buttonRef[1].id = "inactive"
+    playerTurn = 0
+    dieAndCoin.lossTotal = 0
+    dieAndCoin.gameWon = false
+    dieAndCoin.playerRound = playerTurn
+    for(var i=0;i<numberOfPlayers;i++){
+        players[i].firstTurn = true
+        players[i].notBusted = true
+        players[i].score = 0
+        players[i].totalScore = 0
+        if(players[i].type=="computer")
+            players[i].tolerance = normalRandom(36,12)
+    }
+    print("It's now " + players[playerTurn].name + "'s turn!")
+    if(players[playerTurn].type=="computer")
+        computerTurn(players[playerTurn])
+}
 
+function normalRandom(xbar,loops){
+    var n = 0
+    for(var i=0;i<loops;i++)
+        n += Math.floor(Math.random() * xbar * 2) + 1
+    return Math.round(n/loops)
 }
