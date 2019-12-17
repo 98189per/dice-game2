@@ -5,27 +5,27 @@ var gametextRef         //this variable holds a reference to the main textbox wh
 var URLsearch           //this variable holds a reference to an instance of a class which can find form data in the page's URL
 var playerTurn          //this variable stores the index of the player whose turn it currently is 
 var dieAndCoin = {      //this Object generates values and stores values for keeping track of the game
-    firstDie: 0,
-    secondDie: 0,
-    coinFlip: 0,
-    lossTotal: 0,
-    playerRound: 0,
-    gameWon: false,
-    sum: function(){return this.firstDie + this.secondDie},
-    product: function(){return this.firstDie * this.secondDie},
-    maxmin: function(toggle){return toggle ? Math.max(this.firstDie,this.secondDie) : Math.min(this.firstDie,this.secondDie)},
-    identifier: function(){return this.firstDie % 2 + this.secondDie % 2 + 3 * this.coinFlip},
-    score: function(){
+    firstDie: 0,        //the value of the first die
+    secondDie: 0,       //the value of the second die
+    coinFlip: 0,        //the value of the coin flip
+    lossTotal: 0,       //the running coint of bust points
+    playerRound: 0,     //the player who starts each new round
+    gameWon: false,     //whether or not the game has been won (1000+ points)
+    sum: function(){return this.firstDie + this.secondDie},                                                                     //  Sum of two dice
+    product: function(){return this.firstDie * this.secondDie},                                                                 //  Product of two dice
+    maxmin: function(toggle){return toggle ? Math.max(this.firstDie,this.secondDie) : Math.min(this.firstDie,this.secondDie)},  //  Return either max or min of two dice
+    identifier: function(){return this.firstDie % 2 + this.secondDie % 2 + 3 * this.coinFlip},                                  //  A function which returns an integer between 0-5
+    score: function(){                                                                                                          //  Return one of the cases depending on the value
         switch(this.identifier()){
-            case 0: return this.sum()
-            case 1: return 2 * this.sum()
-            case 2: return 2 * this.maxmin(true)
-            case 3: return this.product()
-            case 4: return 2 * this.product()
-            case 5: return 2 * this.maxmin(false)
+            case 0: return this.sum()                       //  Even / Even / Heads
+            case 1: return 2 * this.sum()                   //  Even / Odd / Heads
+            case 2: return 2 * this.maxmin(true)            //  Odd / Odd / Heads               } This works by taking the sum of the parities of the dice rolls e.g.
+            case 3: return this.product()                   //  Even / Even / Tails             } die1 % 2 is either 0 | 1 , same for die2 so,
+            case 4: return 2 * this.product()               //  Even / Odd / Tails              } 0 | 1 + 0 | 1 = 0 | 1 | 2
+            case 5: return 2 * this.maxmin(false)           //  Odd / Odd / Tails               } and then you add 0 or 3 depending on heads(0) or tails(1)
             }
         },
-    roll: function(){
+    roll: function(){                                       //  Randomize the values of the dice and coin
         this.firstDie = Math.floor(Math.random() * 6) + 1
         this.secondDie = Math.floor(Math.random() * 6) + 1
         this.coinFlip = Math.floor(Math.random() * 2)
@@ -55,8 +55,7 @@ function buttonClicked(buttonNumber){   //this method is run whenever a button i
     if(buttonRef[buttonNumber].id=="active"){               //  Check if the button selected is currently active or not
         switch(buttonRef[buttonNumber].innerHTML){          //  Switch statment executes code based on the current text of a button
             case "Yes":     //  Response to "Do you want to play the Dice Game?"
-                if(dieAndCoin.gameWon){
-                    console.log("what")
+                if(dieAndCoin.gameWon){                     //  If this the game has already been won once, reload the page
                     window.location.reload()
                 }
                 print("Okay let's get started! How many players are there?")
@@ -85,7 +84,7 @@ function buttonClicked(buttonNumber){   //this method is run whenever a button i
                 else
                     print("Go " + players[playerTurn].name + "!")
                 break
-            case "Re-roll!":
+            case "Re-roll!":                                                                //  Same as above case
                 dieAndCoin.roll()
                 players[playerTurn].order = dieAndCoin.sum()
                 print(players[playerTurn].name + " rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
@@ -95,68 +94,67 @@ function buttonClicked(buttonNumber){   //this method is run whenever a button i
                 else
                     print("Go " + players[playerTurn].name + "!")
                 break
-            case "Roll":
+            case "Roll":                                                                    //  For actual game
                 dieAndCoin.roll()
-                players[playerTurn].score += dieAndCoin.score()
+                players[playerTurn].score += dieAndCoin.score()                             //  Calculate score
                 print(players[playerTurn].name + " flipped " + (dieAndCoin.coinFlip==0 ? "heads" : "tails") + ", rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
                 print(players[playerTurn].name + "'s new score: " + players[playerTurn].score)
-                checkWinningConditions(players[playerTurn])
+                checkWinningConditions(players[playerTurn])                                 //  Check if the winning conditions were met, passing the current player as the argument
                 break
             case "End Turn":
-                players[playerTurn].firstTurn = true
-                playerTurn++;console.log("playerendturn")
-                if(playerTurn==numberOfPlayers)
+                players[playerTurn].firstTurn = true                                        //  Reset the player's values
+                playerTurn++                                                                //  Increment the player turn
+                if(playerTurn==numberOfPlayers)                                             //  Unless the end of the array has been reached
                     playerTurn = 0
                 buttonRef[1].id = "inactive"
                 print("It's now " + players[playerTurn].name + "'s turn!")
-                console.log(playerTurn,players[playerTurn].name,"function button")
-                if(players[playerTurn].type=="computer")
+                if(players[playerTurn].type=="computer")                                    //  Will call the AI function it is a computer's turn
                     computerTurn(players[playerTurn])
                 break
         }
     }
 }
 
-function checkWinningConditions(player){
+function checkWinningConditions(player){    //this method checks whether a certain player has met the winning conditions for the round
     var returnVal = false
-    if(player.firstTurn && player.type!="computer"){
+    if(player.firstTurn && player.type!="computer"){    //  If a person has already had their first turn, re-activate the 'End Turn' button
         player.firstTurn = false
         buttonRef[1].id = "active"
     }
-    if(player.score>50){
-        player.notBusted = false
-        dieAndCoin.lossTotal += player.score
+    if(player.score>50){                                //  If your score is above 50, you bust
+        player.notBusted = false                        //  Update bool
+        dieAndCoin.lossTotal += player.score            //  Add your score to the running count
         print("Uh-oh... " + player.name + " busted!")
         returnVal = true
-    }else if(player.score==50){
-        player.totalScore += numberOfPlayers * 50
+    }else if(player.score==50){                         //  If you have exactly 50
+        player.totalScore += numberOfPlayers * 50       //  Add the appropriate points to your total score
         print("WOW! " + player.name + " got exactly 50 and won " + numberOfPlayers * 50 + " points!")
-        if(!checkGameWon()){
+        if(!checkGameWon()){                            //  Check if the overall game has been won yet (1000+ points)
             print("Their total score is now " + player.totalScore)
-            resetRound()
+            resetRound()                                //  Reset the round, go to next round
         }
         returnVal = true
     }
-    if(players.filter(player=>player.notBusted).length==1){
+    if(players.filter(player=>player.notBusted).length==1){     //  If there is only one player that has not busted yet
         winner = players.filter(player=>player.notBusted)[0]
-        winner.totalScore += dieAndCoin.lossTotal
+        winner.totalScore += dieAndCoin.lossTotal               //  Add the running bust points to their score
         print(winner.name + " is the only player who hasn't busted this round!")
-        if(!checkGameWon()){
+        if(!checkGameWon()){                                    //  Check if the overall game has been won yet (1000+ points)
             print("Their total score is now " + winner.totalScore)
-            resetRound()
+            resetRound()                                        //  Reset the round, go to next round
         }
         returnVal = true
     }
     return returnVal
 }
 
-function resetRound(){
-    dieAndCoin.playerRound++
-    if(dieAndCoin.playerRound==numberOfPlayers)
+function resetRound(){  //this method resets the properties of each player in preparation for the start of a new round
+    dieAndCoin.playerRound++                                        //  Increment the player who starts the round
+    if(dieAndCoin.playerRound==numberOfPlayers)                     //  Unless the end of the array has been reached
         dieAndCoin.playerRound = 0
-    playerTurn = dieAndCoin.playerRound;console.log("resetendturn")
-    dieAndCoin.lossTotal = 0
-    for(var i=0;i<numberOfPlayers;i++){
+    playerTurn = dieAndCoin.playerRound;                            //  Set the current player's turn to whoever starts the round
+    dieAndCoin.lossTotal = 0                                        //  Reset the counter for bust points
+    for(var i=0;i<numberOfPlayers;i++){                             //  Loop through each player and reset their values
         players[i].firstTurn = true
         players[i].notBusted = true
         players[i].score = 0
@@ -164,7 +162,6 @@ function resetRound(){
     print("Next round!!!")
     buttonRef[1].id = "inactive"
     print("It's now " + players[playerTurn].name + "'s turn!")
-    console.log(playerTurn,players[playerTurn].name,"function reset")
     if(players[playerTurn].type=="computer")
         computerTurn(players[playerTurn])
     else
@@ -172,51 +169,51 @@ function resetRound(){
     buttonRef[1].id = "inactive"
 }
 
-function checkGameWon(){
-    if(players.filter(player=>player.totalScore>=1000).length>0){
+function checkGameWon(){    //this method checks if the overall game has been won (1000+ points)
+    if(players.filter(player=>player.totalScore>=1000).length>0){           //  If anyone has over 1000 points
         winner = players.filter(player=>player.totalScore>=1000)[0]
         print("Holy smokes! " + winner.name + " has won the game by reaching " + winner.totalScore + " points!")
         print("Congratulations!!!" + "</br>" + "Would you like to play again?")
-        buttonRef[0].innerHTML = "Yes"
+        buttonRef[0].innerHTML = "Yes"                                      //  Repeat the same question as the start of the game
+        buttonRef[0].id = "active"
         buttonRef[1].innerHTML = "No"
-        dieAndCoin.gameWon = true
+        buttonRef[1].id = "active"
+        dieAndCoin.gameWon = true                                           //  Toggle value for how page reloading works
         return true
     }
     return false
 }
 
-function sleep(ms) {
+function sleep(ms) {    //this method is an asynchronous wait function because JS doesn't have a synchronous version
     return new Promise(resolve => setTimeout(resolve, ms));
-}
+}//*it took me forever to debug this because it caused the while loop to execute even after it was supposed to have been broken out of... -_-
 
-async function computerTurn(computer){
-    console.log(computer.type)
-    buttonRef[0].id = "inactive"
+async function computerTurn(computer){  //this method automatically rolls for a computer-type player during their turn
+    buttonRef[0].id = "inactive"                        //  Deactivate the buttons so that the player cannot interfere with the computer's turn
     buttonRef[1].id = "inactive"
-    do {
+    var inloop = false
+    do {                                                //  Execute at least once, since you cannot end on the first turn
+        inloop = true   //I am *this* close to having it work | either computers only breaks or... set a flag for comp v player when comp busts (eg line 203 never happens)
         buttonRef[1].id = "inactive"
-        dieAndCoin.roll()
-        computer.score += dieAndCoin.score()
-        print(computer.name + " flipped " + (dieAndCoin.coinFlip==0 ? "heads" : "tails") + ", rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
-        print(computer.name + "'s new score: " + computer.score)
-        var computerWon = checkWinningConditions(players[playerTurn])
-        if(!computerWon){
-            console.log("startsleep")//resulting in computer playing for player
-            await sleep(1000)//how to cancel early?
-            console.log("endsleep")//repeats past end of turn, need cancellation
-        }
-    } while(computer.score<computer.tolerance && !computerWon)
-    if(players[playerTurn].type=="computer"){
-        players[playerTurn].firstTurn = true
-        console.log(playerTurn,players[playerTurn].name)
-        playerTurn++;console.log("compendturn")
-        if(playerTurn==numberOfPlayers)
+        dieAndCoin.roll()                               //  Roll the dice + toss coin
+        players[playerTurn].score += dieAndCoin.score() //  Compute and increment score
+        print(players[playerTurn].name + " flipped " + (dieAndCoin.coinFlip==0 ? "heads" : "tails") + ", rolled a " + dieAndCoin.firstDie + " and a " + dieAndCoin.secondDie + "!")
+        print(players[playerTurn].name + "'s new score: " + players[playerTurn].score)  //  Print result
+        var computerWon = checkWinningConditions(players[playerTurn])   //  Check if the winning conditions were met, passing the current player as an argument
+        if(!computerWon){                               //  I have no clue whether this is actually necessary or not but when I remove it stuff breaks so I'm leaving it here
+            await sleep(1000)                           //  Wait before repeating turn to avoid printing out block text and to give time for the person to read 
+            inloop = false
+        }//else{inloop = false}
+    } while(computer.score<computer.tolerance && !computerWon && players[playerTurn].type=="computer")  //  While the score is below the computer's tolerance continue rolling
+    if(players[playerTurn].type=="computer" && !inloop){    //  Again, this method is really messy because of the async/wait, so I don't really know whether or not this if statement is needed
+        players[playerTurn].firstTurn = true                //  Reset values for next turn
+        playerTurn++
+        if(playerTurn==numberOfPlayers)                     //  ...or start of array if we have reached the end
             playerTurn = 0
         buttonRef[0].id = "active"
-        buttonRef[1].id = "inactive"
+        buttonRef[1].id = "inactive"                        //  Player cannot end on first turn
         print("It's now " + players[playerTurn].name + "'s turn!")
-        console.log(playerTurn,players[playerTurn].name,"function compturn")
-        if(players[playerTurn].type=="computer")
+        if(players[playerTurn].type=="computer")            //  It the next player is also a computer call this method again
             computerTurn(players[playerTurn])
     }
 }
@@ -356,34 +353,35 @@ function playerOrder(){ //this method rolls two dice for each player and determi
     handleGameFlow()                                                                //  Call the function that start the actual game
 }
 
-function handleGameFlow(){
+function handleGameFlow(){  //this method sets the final variables before the game starts
     print(players[0].name + " goes first, let the game begin!!!")
-    buttonRef[0].innerHTML = "Roll"
+    buttonRef[0].innerHTML = "Roll"             //  Set the text for the first button
     buttonRef[0].id = "active"
-    buttonRef[1].style.display = "inline-block"
-    buttonRef[1].innerHTML = "End Turn"
-    buttonRef[1].id = "inactive"
-    playerTurn = 0
-    dieAndCoin.lossTotal = 0
-    dieAndCoin.gameWon = false
-    dieAndCoin.playerRound = playerTurn
-    for(var i=0;i<numberOfPlayers;i++){
-        players[i].firstTurn = true
-        players[i].notBusted = true
-        players[i].score = 0
-        players[i].totalScore = 0
-        if(players[i].type=="computer")
-            players[i].tolerance = normalRandom(36,12)
+    buttonRef[1].style.display = "inline-block" //  Display the second button (was hidden for the previous function)
+    buttonRef[1].innerHTML = "End Turn"         //  Set the text for the second button
+    buttonRef[1].id = "inactive"                //  Deactivate it (players can't end on their first roll)
+    playerTurn = 0                              //  Keeps track of whose turn it is within a round
+    dieAndCoin.lossTotal = 0                    //  A running count of the scores of everyone who has busted
+    dieAndCoin.gameWon = false                  //  Checks if the game has been won yet (for resetting purposes)
+    dieAndCoin.playerRound = playerTurn         //  Keeps track of whose turn it is at the start of each round
+    for(var i=0;i<numberOfPlayers;i++){         //  Loop through all players and set initial values
+        players[i].firstTurn = true             //  Each players' first turn (can't end on first turn)
+        players[i].notBusted = true             //  Each player has not busted at the start of each round
+        players[i].score = 0                    //  Each players' score for each round
+        players[i].totalScore = 0               //  Each players' overall score for the game
+        if(players[i].type=="computer")         //  Assigns computers a special value that determines when they will stop rolling 
+            players[i].tolerance = normalRandom(36,12)  //  Normally distributed random numbers with a mean of 36
     }
     print("It's now " + players[playerTurn].name + "'s turn!")
-    console.log(playerTurn,players[playerTurn].name,"function 1")
-    if(players[playerTurn].type=="computer")
+    if(players[playerTurn].type=="computer")    //  Will call the AI function if it is a computer's turn
         computerTurn(players[playerTurn])
 }
 
-function normalRandom(xbar,loops){
+function normalRandom(xbar,loops){  //this method generates normally distributed random variables 
     var n = 0
     for(var i=0;i<loops;i++)
         n += Math.floor(Math.random() * xbar * 2) + 1
-    return Math.round(n/loops)
-}
+    return Math.round(n/loops)      //  Take an average of repeated throws from a uniform distribution
+}                                   //  I don't fully understand why exactly this works, but experimentally calculated it has a standard deviation of 6
+                                    //  This means 68% of numbers generated will be between 30-42, 27% more within 24-48, and 4.5% more within 18-54                                    
+                                    //  So yes, there is a ~1% chance that a computer will keep rolling past 50 automatically, but that just makes the game more amusing
