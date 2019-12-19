@@ -4,6 +4,7 @@ var buttonRef = []      //this array holds references to the two main buttons on
 var gametextRef         //this variable holds a reference to the main textbox where all messages are printed
 var URLsearch           //this variable holds a reference to an instance of a class which can find form data in the page's URL
 var playerTurn          //this variable stores the index of the player whose turn it currently is 
+var inloop              //this variable determines whether or not a computer should continue its turn
 var dieAndCoin = {      //this Object generates values and stores values for keeping track of the game
     firstDie: 0,        //the value of the first die
     secondDie: 0,       //the value of the second die
@@ -102,14 +103,7 @@ function buttonClicked(buttonNumber){   //this method is run whenever a button i
                 checkWinningConditions(players[playerTurn])                                 //  Check if the winning conditions were met, passing the current player as the argument
                 break
             case "End Turn":
-                players[playerTurn].firstTurn = true                                        //  Reset the player's values
-                playerTurn++                                                                //  Increment the player turn
-                if(playerTurn==numberOfPlayers)                                             //  Unless the end of the array has been reached
-                    playerTurn = 0
-                buttonRef[1].id = "inactive"
-                print("It's now " + players[playerTurn].name + "'s turn!")
-                if(players[playerTurn].type=="computer")                                    //  Will call the AI function it is a computer's turn
-                    computerTurn(players[playerTurn])
+                nextTurn()                                                                  //  Call the function that moves to the next players turn
                 break
         }
     }
@@ -125,6 +119,9 @@ function checkWinningConditions(player){    //this method checks whether a certa
         player.notBusted = false                        //  Update bool
         dieAndCoin.lossTotal += player.score            //  Add your score to the running count
         print("Uh-oh... " + player.name + " busted!")
+        inloop = false                                  //  If it is a computer, break out of loop
+        if(player.type=="person")
+            nextTurn()                                  //  If it is a player, move to the next turn
         returnVal = true
     }else if(player.score==50){                         //  If you have exactly 50
         player.totalScore += numberOfPlayers * 50       //  Add the appropriate points to your total score
@@ -152,7 +149,7 @@ function resetRound(){  //this method resets the properties of each player in pr
     dieAndCoin.playerRound++                                        //  Increment the player who starts the round
     if(dieAndCoin.playerRound==numberOfPlayers)                     //  Unless the end of the array has been reached
         dieAndCoin.playerRound = 0
-    playerTurn = dieAndCoin.playerRound;                            //  Set the current player's turn to whoever starts the round
+    playerTurn = dieAndCoin.playerRound                             //  Set the current player's turn to whoever starts the round
     dieAndCoin.lossTotal = 0                                        //  Reset the counter for bust points
     for(var i=0;i<numberOfPlayers;i++){                             //  Loop through each player and reset their values
         players[i].firstTurn = true
@@ -185,15 +182,15 @@ function checkGameWon(){    //this method checks if the overall game has been wo
 }
 
 function sleep(ms) {    //this method is an asynchronous wait function because JS doesn't have a synchronous version
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms))
 }//*it took me forever to debug this because it caused the while loop to execute even after it was supposed to have been broken out of... -_-
 
 async function computerTurn(computer){  //this method automatically rolls for a computer-type player during their turn
     buttonRef[0].id = "inactive"                        //  Deactivate the buttons so that the player cannot interfere with the computer's turn
     buttonRef[1].id = "inactive"
-    var inloop = false
+    inloop = false                                      //  Computer is not in loop
     do {                                                //  Execute at least once, since you cannot end on the first turn
-        inloop = true   //I am *this* close to having it work | either computers only breaks or... set a flag for comp v player when comp busts (eg line 203 never happens)
+        inloop = true                                   //  Computer IS in loop
         buttonRef[1].id = "inactive"
         dieAndCoin.roll()                               //  Roll the dice + toss coin
         players[playerTurn].score += dieAndCoin.score() //  Compute and increment score
@@ -202,20 +199,26 @@ async function computerTurn(computer){  //this method automatically rolls for a 
         var computerWon = checkWinningConditions(players[playerTurn])   //  Check if the winning conditions were met, passing the current player as an argument
         if(!computerWon){                               //  I have no clue whether this is actually necessary or not but when I remove it stuff breaks so I'm leaving it here
             await sleep(1000)                           //  Wait before repeating turn to avoid printing out block text and to give time for the person to read 
-            inloop = false
+            inloop = false                              //  Temporarily not in loop, can break out 
         }//else{inloop = false}
     } while(computer.score<computer.tolerance && !computerWon && players[playerTurn].type=="computer")  //  While the score is below the computer's tolerance continue rolling
     if(players[playerTurn].type=="computer" && !inloop){    //  Again, this method is really messy because of the async/wait, so I don't really know whether or not this if statement is needed
-        players[playerTurn].firstTurn = true                //  Reset values for next turn
-        playerTurn++
-        if(playerTurn==numberOfPlayers)                     //  ...or start of array if we have reached the end
-            playerTurn = 0
-        buttonRef[0].id = "active"
-        buttonRef[1].id = "inactive"                        //  Player cannot end on first turn
-        print("It's now " + players[playerTurn].name + "'s turn!")
-        if(players[playerTurn].type=="computer")            //  It the next player is also a computer call this method again
-            computerTurn(players[playerTurn])
+        nextTurn()
     }
+}
+
+function nextTurn(){    //this method increments to the next players' turn
+    do{
+    players[playerTurn].firstTurn = true                                        //  Reset the player's values
+    playerTurn++                                                                //  Increment the player turn
+    if(playerTurn==numberOfPlayers)                                             //  Unless the end of the array has been reached
+        playerTurn = 0
+    }while(!players[playerTurn].notBusted)                                      //  Loop until a you reach a player that has not busted
+    buttonRef[0].id = "active"
+    buttonRef[1].id = "inactive"                                                //  Player cannot end on first turn
+    print("It's now " + players[playerTurn].name + "'s turn!")
+    if(players[playerTurn].type=="computer")                                    //  Will call the AI function if it is a computer's turn
+        computerTurn(players[playerTurn])
 }
 
 function getNumberOfPlayersForm(){  //this method creates the form asking for the number of players
